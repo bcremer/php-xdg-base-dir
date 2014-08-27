@@ -7,7 +7,7 @@ class XdgTest extends PHPUnit_Framework_TestCase
      */
     public function getXdg()
     {
-        return new \XdgBaseDir\Xdg();
+        return \XdgBaseDir\Xdg::createFromEnvironment();
     }
 
     public function testGetHomeDir()
@@ -26,37 +26,49 @@ class XdgTest extends PHPUnit_Framework_TestCase
 
     public function testXdgPutCache()
     {
-        putenv('XDG_DATA_HOME=tmp/');
-        putenv('XDG_CONFIG_HOME=tmp/');
-        putenv('XDG_CACHE_HOME=tmp/');
-        $this->assertEquals('tmp/', $this->getXdg()->getHomeCacheDir());
+        $env = [
+            'XDG_DATA_HOME' => 'tmp/',
+            'XDG_CONFIG_HOME' => 'tmp/',
+            'XDG_CACHE_HOME' => 'tmp/',
+        ];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
+
+        $this->assertEquals('tmp/', $xdg->getHomeCacheDir());
     }
 
     public function testXdgPutData()
     {
-        putenv('XDG_DATA_HOME=tmp/');
-        $this->assertEquals('tmp/', $this->getXdg()->getHomeDataDir());
+        $env = ['XDG_DATA_HOME' => 'tmp/'];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
+
+        $this->assertEquals('tmp/', $xdg->getHomeDataDir());
     }
 
     public function testXdgPutConfig()
     {
-        putenv('XDG_CONFIG_HOME=tmp/');
-        $this->assertEquals('tmp/', $this->getXdg()->getHomeConfigDir());
+        $env = ['XDG_CONFIG_HOME' => 'tmp/'];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
+
+        $this->assertEquals('tmp/', $xdg->getHomeConfigDir());
     }
 
     public function testXdgDataDirsShouldIncludeHomeDataDir()
     {
-        putenv('XDG_DATA_HOME=tmp/');
-        putenv('XDG_CONFIG_HOME=tmp/');
+        $env = [
+            'XDG_DATA_HOME' => 'tmp/',
+            'XDG_CONFIG_HOME' => 'tmp/'
+        ];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
 
-        $this->assertArrayHasKey('tmp/', array_flip($this->getXdg()->getDataDirs()));
+        $this->assertArrayHasKey('tmp/', array_flip($xdg->getDataDirs()));
     }
 
     public function testXdgConfigDirsShouldIncludeHomeConfigDir()
     {
-        putenv('XDG_CONFIG_HOME=tmp/');
+        $env = ['XDG_CONFIG_HOME' => 'tmp/'];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
 
-        $this->assertArrayHasKey('tmp/', array_flip($this->getXdg()->getConfigDirs()));
+        $this->assertArrayHasKey('tmp/', array_flip($xdg->getConfigDirs()));
     }
 
     /**
@@ -64,9 +76,10 @@ class XdgTest extends PHPUnit_Framework_TestCase
      */
     public function testGetRuntimeDir()
     {
-        putenv('XDG_RUNTIME_DIR=/tmp/');
-        $runtimeDir = $this->getXdg()->getRuntimeDir();
+        $env = ['XDG_RUNTIME_DIR' => '/tmp/'];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
 
+        $runtimeDir =$xdg->getRuntimeDir();
         $this->assertEquals(is_dir($runtimeDir), true);
     }
 
@@ -77,23 +90,29 @@ class XdgTest extends PHPUnit_Framework_TestCase
      */
     public function testGetRuntimeDirShouldThrowException()
     {
-        putenv('XDG_RUNTIME_DIR=');
-        $this->getXdg()->getRuntimeDir(true);
+        $env = ['XDG_RUNTIME_DIR' => ''];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
+
+        $xdg->getRuntimeDir(true);
     }
 
     /**
      * In fallback mode a directory should be created
+     * @filesystem
      */
     public function testGetRuntimeDirShouldCreateDirectory()
     {
-        putenv('XDG_RUNTIME_DIR=');
-        $dir = $this->getXdg()->getRuntimeDir(false);
+        $env = ['XDG_RUNTIME_DIR' => ''];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
+
+        $dir = $xdg->getRuntimeDir(false);
         $permission = decoct(fileperms($dir) & 0777);
         $this->assertEquals(700, $permission);
     }
 
     /**
      * Ensure, that the fallback directories are created with correct permission
+     * @filesystem
      */
     public function testGetRuntimeShouldDeleteDirsWithWrongPermission()
     {
@@ -106,8 +125,9 @@ class XdgTest extends PHPUnit_Framework_TestCase
         $permission = decoct(fileperms($runtimeDir) & 0777);
         $this->assertEquals(764, $permission);
 
-        putenv('XDG_RUNTIME_DIR=');
-        $dir = $this->getXdg()->getRuntimeDir(false);
+        $env = ['XDG_RUNTIME_DIR' => ''];
+        $xdg = \XdgBaseDir\Xdg::createFromArray($env);
+        $dir = $xdg->getRuntimeDir(false);
 
         // Permission should be fixed
         $permission = decoct(fileperms($dir) & 0777);
